@@ -1,0 +1,453 @@
+---
+title: 'Dirty work: getting your data ready for analysis'
+author: "P. Roudier"
+date: "22 June 2017"
+output: html_document
+---
+
+# From *messy* to *tidy* data
+
+A very significant part of your time *will* be spent formatting data.
+
+**Data tidying** is the operation of transforming data into a clear and simple form that makes it easy to work with:
+
+- Very often one wants one row per observation/sample, with each column representing a measured/estimated variable.
+- There is always a range of mistakes to fix in your raw data so to make automation/scripting possible
+
+In this quick tutorial I will introduce some tools I frequently use to put my data into shape *before I start the analysis*.
+
+## The tidyverse
+
+In this tutorial I will showcase functions from a *family of packages* called the **tidyverse**. 
+
+Some functionalities from the `tidyverse` are already present in `base` R, or provided by other packages, but this set of tools are following common logic, and usually make this data tidying step:
+- *a little bit* less frustrating
+- *a little bit* faster
+
+```{r load_tidy, message=FALSE}
+library(readr) # read flat/text files (such as CSV)
+library(dplyr) # a grammar of data manipulation
+library(tidyr) # play with data dimensions
+```
+
+Some tools are more specific:
+
+```{r load_tidy_2, message=FALSE}
+library(magrittr) # Create "pipelines"
+library(stringr) # manipulating character strings
+library(forcats) # handle categorical data more easily
+```
+
+And more packages, not covered by this tutorial:
+
+```{r load_tidy_3, message=FALSE, eval=FALSE}
+library(lubridate) # manipulation of date and times data
+library(purrr) # advanced functional programming
+library(readxl) # read data directly from Microsoft Excel files
+```
+
+These set of tools have been coded with the same philosophy in mind:
+
+1. Reuse existing data structures.
+2. Compose simple functions with the pipe.
+3. Embrace functional programming.
+4. Design for humans.
+
+It is well worth checking out the website: `http://tidyverse.org/`
+A handy tip: you can load the whole family of *tidy* packages by calling the `tidyverse` library:
+
+```{r load_tidyverse, message=FALSE}
+library(tidyverse)
+```
+
+## `data.frame` FTW `r emo::ji("victory")`
+
+At the centre of this set of tols is the `data.frame`. The `data.frame` is the most common data structure in R. Tools from the `tidyverse` all only work on `data.frame`. 
+
+Some of these tools introduced a very similar data structure called `tibble`. It is very similar to the `data.frame` -- and actually it *is* a very specific `data.frame`:
+
+```{r tibble}
+tbl <- tibble(a = 1:3, b = c('a', 'b', 'c'))
+tbl
+is.data.frame(tbl)
+```
+
+You can convert vrey easily a `data.frame` to a `tibble`, and vice and versa:
+
+```{r tibble_2}
+head(mtcars) # print the first 5 lines of the mtcars dataset
+class(mtcars)
+
+tbl_mtcars <- as_tibble(mtcars)
+class(tbl_mtcars)
+
+as.data.frame(tbl_mtcars)
+```
+
+## Pipelines
+
+There's a tool that fits very well in this picture: the *pipe* operator. 
+
+The pipe operator is denoted `%>%`, and is introduced by the `magrittr` package.
+
+What it does is to "pass" the result of a function to another function. Therefore:
+
+```{r magrittr}
+head(mtcars) # print the first 5 line sof the mtcars dataset
+
+# Let's say you want to filter the vehicles that have 
+# 6 cylinders, and create a new variable that is the square
+# root of their fuel consumption:
+res <- subset(mtcars, cyl == 6)
+res <- mutate(res, mpg_sq = sqrt(res$mpg))
+res
+
+res <- mtcars %>% 
+  subset(cyl == 6) %>% 
+  mutate(mpg_sq = sqrt(mpg))
+res
+```
+
+You don't have to use it, but it makes your code more readable.
+
+## The tidyverse verbs
+
+The `tidyverse` provides a set of basic verbs corresponding to each specific task of data manipulation:
+
+- Filter specific rows: `filter`(and `slice`)
+- Select specific variables: `select`
+- Select unique rows: `distinct`
+- Create new variables: `mutate` (and `transmute`)
+- Arrange rows by variables: `arrange`
+- Summarise multiple values into a single one: `summarise`
+- Sample rows: `sample_n` (and `sample_frac`)
+
+```{r load_aqp, message=FALSE}
+# let's load some soil profile data
+data(sp1, package  = 'aqp')
+sp1 <- as_tibble(sp1)
+```
+
+### Strings
+
+The `stringr` package provides a wide range of tools to handle strings of characters. These are often a headache when dealing with soil data (rogue white sapces, etc):
+
+```{r stringr}
+str_detect(sp1$name, 'A')
+
+str_replace_all(sp1$name, '[0-9]', '')
+str_replace_all(sp1$name, '[0-9]', '')
+
+sp1$name %>% 
+  str_replace_all('[0-9]', '') %>% 
+  str_replace_all('[a-z]', '')
+
+str_extract_all(sp1$name, '[A-Z]', simplify = TRUE) %>% 
+  head
+```
+
+### Filter
+
+```{r filter, message=FALSE}
+sp1 %>% 
+  filter(name == 'A1')
+
+sp1 %>% 
+  filter(name == "A1" | name == "A2" | name == "A3")
+
+# Using stringr for string manipulation
+sp1 %>% 
+  filter(str_detect(name, 'A') & field_ph >8)
+
+sp1 %>% 
+  slice(1:3)
+```
+
+### Select
+
+```{r select}
+sp1 %>% 
+  select(id, top, bottom, field_ph) 
+
+sp1 %>% 
+  select(id:bottom)
+
+sp1 %>% 
+  select(-(id:bottom))
+
+sp1 %>% 
+  select(starts_with('b'))
+```
+
+### Rename
+
+```{r rename}
+sp1 %>% 
+  select(id, top, bottom, field_ph) %>% 
+  rename(ph = field_ph)
+```
+
+### Arrange
+
+```{r arrange}
+sp1 %>% 
+  select(id, top, bottom, field_ph) %>% 
+  arrange(field_ph) 
+
+sp1 %>% 
+  select(id, top, bottom, field_ph) %>% 
+  arrange(desc(field_ph)) 
+```
+
+### Extract unique rows
+
+Similar to `unique()` but much faster:
+
+```{r distinct}
+sp1 %>% 
+  distinct(id)
+```
+
+### Add new columns
+
+```{r mutate}
+sp1 %>% 
+  select(id, top, bottom, field_ph) %>% 
+  mutate(log_ph = log(field_ph))
+
+# you can refer to variables you just created
+sp1 %>% 
+  select(id, top, bottom, field_ph) %>% 
+  mutate(
+    log_ph = log(field_ph),
+    log_ph_p1 = log_ph + 1
+  )
+```
+
+### Summarise a group of rows into a unique value
+
+```{r summarise}
+sp1 %>% 
+  summarise(
+    max_depth = max(bottom),
+    mean_ph = mean(field_ph, na.rm = TRUE)
+  )
+```
+
+### Random sampling of rows
+
+```{r sample}
+sp1 %>% 
+  select(id, top, bottom, field_ph) %>% 
+  sample_n(3)
+
+sp1 %>% 
+  select(id, top, bottom, field_ph) %>% 
+  sample_frac(0.2)
+```
+
+### Separate and group columns
+
+```{r unite}
+sp1 %>% 
+  unite(depth, top, bottom, sep = '-')
+
+sp1_depths <- sp1 %>% 
+  unite(depth, top, bottom, sep = '-') %>% 
+  mutate(depth = str_c(depth, 'cm')) 
+
+head(sp1_depths)
+```
+
+`separate` is the complement function to `unite`:
+
+```{r separate}
+sp1_depths %>% 
+  separate(depth, c('top', 'bottom'), sep = '-')
+
+sp1_depths %>% 
+  separate(depth, c('top', 'bottom'), sep = '-') %>% 
+  mutate(bottom = str_replace(bottom, 'cm', ''))
+
+sp1_depths %>% 
+  separate(depth, c('top', 'bottom'), sep = '-') %>% 
+  mutate(
+    bottom = str_replace(bottom, 'cm', ''),
+    top = as.numeric(top),
+    bottom = as.numeric(bottom)
+  )
+```
+
+### Joins
+
+A very useful set of tools in your data wrangling toolbox are the **joins**. 
+
+This operation joins two data sources together. For example you might have additional data that is stored in a different file.
+
+There are several options to do this in R: `merge` is additional in `base` R, `join` from the `plyr` package. I found the join operators from the `dplyr` package to b faster and easier to use.
+
+Let's start with a **left join**: you have a "master" copy of your data (on your left hand), and you will add columns from an additional data source (on your right). What makes it a left join is that only the records from this additional dataset that matches the records present in your "master" dataset will be merged. 
+
+
+```{r join0}
+additional_data <- data.frame(
+  id = unique(sp1$id),
+  more_data = runif(9),
+  even_more_data = LETTERS[1:9]
+)
+head(additional_data)
+
+left_join(sp1, additional_data)
+```
+
+```{r join1}
+additional_data <- data.frame(
+  id = unique(sp1$id),
+  more_data = runif(9),
+  even_more_data = LETTERS[1:9]
+)
+head(additional_data)
+
+left_join(sp1, additional_data, by = 'id')
+```
+
+Slighly more complex case: when the variables to join the two `data.frame` are named differently: 
+```{r join_2}
+additional_data <- data.frame(
+  some_id = unique(sp1$id),
+  more_data = runif(9),
+  even_more_data = LETTERS[1:9]
+)
+head(additional_data)
+
+left_join(sp1, additional_data, by = c('id' = 'some_id'))
+```
+
+```{r join_3}
+additional_data <- data.frame(
+  some_id = unique(sp1$id),
+  some_group = sample(1:2, size = 9, replace = TRUE),
+  more_data = runif(9),
+  even_more_data = LETTERS[1:9]
+)
+head(additional_data)
+
+left_join(
+  sp1, additional_data, 
+  by = c(
+    'id' = 'some_id',
+    'group' = 'some_group'
+  )
+)
+```
+
+- `inner_join`: return all rows from x where there are matching values in y, and all columns from x and y. If there are multiple matches between x and y, all combination of the matches are returned.
+- `left_join`: return all rows from x, and all columns from x and y. Rows in x with no match in y will have NA values in the new columns. If there are multiple matches between x and y, all combinations of the matches are returned.
+- `right_join`: return all rows from y, and all columns from x and y. Rows in y with no match in x will have NA values in the new columns. If there are multiple matches between x and y, all combinations of the matches are returned.
+- `semi_join`: return all rows from x where there are matching values in y, keeping just columns from x. A semi join differs from an inner join because an inner join will return one row of x for each matching row of y, where a semi join will never duplicate rows of x.
+- `anti_join`: return all rows from x where there are not matching values in y, keeping just columns from x.
+- `full_join`: return all rows and all columns from both x and y. Where there are not matching values, returns NA for the one missing.
+
+### Grouped operations
+
+```{r group}
+sp1 %>% 
+  group_by(id) %>% 
+  summarise(mean_ph = mean(field_ph, na.rm = TRUE))
+
+sp1 %>% 
+  group_by(hue, bound_topography) %>% 
+  summarise(
+    number_of_profiles = n(),
+    mean_ph = mean(field_ph, na.rm = TRUE)
+  )
+```
+
+### Apply arbitrary functions
+
+```{r do}
+# Fit a linear model for each level of column "group"
+sp1 %>% 
+  group_by(group) %>% 
+  do(
+    model = lm(field_ph ~ hue + value + chroma, data = .)
+  )
+
+# Extract R-squared from each fitted model
+sp1 %>% 
+  group_by(group) %>% 
+  do(
+    model = lm(field_ph ~ hue + value + chroma, data = .)
+  ) %>% 
+  summarise(
+    rsq = summary(model)$r.squared
+  )
+```
+
+## From wide to long (and back)
+
+There are two ways to store your tidy data:
+
+- **wide**: each row is an observation, each column is a measured variable for that observation 
+- **long**: each row is one measurement for a given observation
+
+```{r wide_long, echo=FALSE, warning=FALSE}
+sp1 %>% 
+  as_tibble
+
+sp1 %>% 
+  as_tibble %>% 
+  select(group:field_ph) %>% 
+  gather(variable, value, -(group:bottom))
+```
+
+Each "format" has its own use and it's useful to be able to go from one to another
+
+```{r tidyr}
+sp1 %>% 
+  select(id, top, bottom, hue, value, chroma) %>% 
+  gather(key, val)
+
+sp1 %>% 
+  select(id, top, bottom, hue, value, chroma) %>% 
+  gather(key, val, -id, -top, -bottom)
+```
+
+This sort of formatting into key-value pairs is widely used by some plotting systems such as `ggplot2`. Here's just a taster of what's possible:
+
+```{r ggplot, warning=FALSE}
+data(sp4, package = "aqp")
+
+head(sp4)
+
+sp4 <- as_tibble(sp4)
+
+sp4 %>% 
+  gather(key, val, -(id:bottom)) %>% 
+  ggplot() +
+    geom_boxplot(aes(x = name, y = val)) + 
+    facet_wrap(~key, scales = "free") 
+```
+
+```{r tidyr_2}
+wide <- sp4 %>% 
+  gather(variable, value, -(id:bottom))
+
+head(wide)
+
+long <- wide %>% 
+  spread(variable, value)
+
+head(long)
+```
+
+# Loading soil data into R
+
+The main study cases are:
+
+- Text file format
+- Spatial file format
+- Database (spatial or not)
+ 
+`sf`, `sp`
+
