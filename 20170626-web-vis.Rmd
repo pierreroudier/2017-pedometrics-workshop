@@ -5,7 +5,7 @@ date: "22 June 2017"
 output: html_document
 ---
 
-```{r libs}
+```{r libs, message=FALSE, warning=FALSE, results='hide'}
 library(sf)
 library(raster)
 library(dplyr)
@@ -14,71 +14,113 @@ library(mapview)
 library(RColorBrewer)
 ```
 
+# Datasets
+
+For this demonstration, we are using the `cookfarm` dataset from the `GSIF` package. This dataset is a list with 6 somponents storing various measurements that have been done on the farm.
+
 ```{r data}
 data('cookfarm', package = "GSIF")
 
 names(cookfarm)
 ```
 
-```{r format_data_grids, message=FALSE, warning=FALSE}
-grids <- cookfarm$grids %>% 
-  dplyr::select(x, y, DEM, TWI, Cook_fall_ECa, Cook_spr_ECa) %>% 
-  rasterFromXYZ(crs = cookfarm$proj4string)
+## Vector data
 
-plot(grids)
-```
+The `profiles` component stores soil profile data as a `data.frame`. We will turn this into a simple featrure using the `sf` package:
 
 ```{r format_data_profiles, message=FALSE, warning=FALSE}
 profiles <- cookfarm$profiles %>% 
   st_as_sf(coords = c('Easting', 'Northing'), crs = cookfarm$proj4string)
 
+# simple plot using the sf package
 plot(profiles)
 ```
 
-```{r mapview_1, warning=FALSE}
-# Plot points
-mapview(profiles)
-mapview(profiles, zcol = "BLD")
-mapview(profiles, zcol = "TAXSUSDA")
 
+## Raster data
+
+The `grids` component is storing gridded data. We will reansform these into a `RasterStack` using the `rasterFromXYZ` function. This function requires the `x` and `y` columns to be the first column of the `data.frame` (from the left) -- a good opportunity to use the `select` function from the `dplyr` package:
+
+```{r format_data_grids, message=FALSE, warning=FALSE}
+grids <- cookfarm$grids %>% 
+  dplyr::select(x, y, DEM, TWI, Cook_fall_ECa, Cook_spr_ECa) %>%  # Re-order the columns, and select 4 interesting variables
+  rasterFromXYZ(crs = cookfarm$proj4string) # The coordinate reference system is stored as one of the component in cookfarm
+
+# simple plot using the raster package
+plot(grids)
+```
+
+# Interactive maps using `mapview`
+
+## Let's start easy... 
+
+### Vector data
+
+```{r mapview_points, warning=FALSE}
+# couldn't be easier to create a map!
+mapview(profiles)
+
+# Tweaking palettes 
 pal_continuous <- colorRampPalette(brewer.pal(7, "BrBG"))
 pal_categorical <- colorRampPalette(brewer.pal(9, "Set1"))
 
-mapview(profiles, zcol = "BLD", col.regions = pal_continuous, legend = TRUE)
 mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical, legend = TRUE)
 
-# Plot grids
-mapview(grids)
-mapview(grids, col.regions = pal_continuous, legend = TRUE)
-mapview(grids$TWI, col.regions = pal_continuous, legend = TRUE)
+# Tweaking backgrounds
+mapview(profiles, zcol = "BLD", col.regions = pal_continuous, legend = TRUE, map.types = "Esri.WorldImagery")
+```
 
-# Plot both together
-mapview(grids$DEM, col.regions = pal_continuous, legend = TRUE) + mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical)
-
+```{r mapview_burst}
 # Burst to separate soil classes
 mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical, legend = TRUE, burst = TRUE)
+```
 
-# Syncing several maps
-m1 <- mapview(grids$DEM)
-m2 <- mapview(grids$TWI)
-m3 <- mapview(profiles)
+### Raster data
 
-sync(m1, m2, m3)
+```{r mapview_grids}
+# Plot grids
+mapview(grids)
+mapview(grids, col.regions = pal_continuous, na.color = NA,  legend = TRUE)
+mapview(grids$TWI, col.regions = pal_continuous, na.color = NA, legend = TRUE)
+```
 
+### Satellite data
+
+```{r mapview_sat}
 # Raster specific functions
 viewRGB(poppendorf)
 viewRGB(poppendorf, 4, 3, 2)
+```
 
-# plainview
-plainview(poppendorf[[1]])
-plainview(poppendorf[[1]], at = seq(8000, 11000, 50))
-plainview(poppendorf, 4, 3, 2)
-plainview(poppendorf, 5, 4, 3, quantiles = c(0.5, 1))
+### Visualising projected data
 
-# slideview
-slideview(poppendorf[[1]], poppendorf[[5]])
-slideview(poppendorf[[1]], poppendorf[[5]], legend = FALSE)
+```{r plainview}
+plainview(grids$DEM)
+```
 
+### Adding `mapviews` together
+
+```{r mapview_both}
+# Plot both together
+mapview(grids$DEM, col.regions = pal_continuous, legend = TRUE) + mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical)
+```
+
+## Advanced tools
+
+### Sync'ing maps
+
+```{r mapview_sync}
+# Syncing several maps
+m1 <- mapview(grids$DEM) 
+m2 <- mapview(grids$TWI) 
+m3 <- mapview(grids$Cook_fall_ECa)
+
+sync(m1, m2, m3, ncol = 2, sync.cursor = TRUE)
+```
+
+### Slideview
+
+```{r slideview}
 img1 <- poppendorf[[1]]
 img2 <- poppendorf[[5]]
 
@@ -86,17 +128,12 @@ slideview(
   img1, 
   img2,
   label1 = "Poppendorf-Layer-1",
-  label2 = "Poppendorf-Layer-2"
+  label2 = "Poppendorf-Layer-2",
+  legend = TRUE
 )
-
-# cubeview
-# stck <- raster::stack("tappelhans/uni/talks/jena_201703/data/barazar.tif")
-# raster::nlayers(stck) * raster::ncell(stck) # takes a while!!
-# cubeview(stck)
-
-
-
 ```
+
+### Popups
 
 ```{r advanced_mapview_1}
 mapview(
