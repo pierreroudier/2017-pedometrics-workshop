@@ -1,0 +1,46 @@
+---
+title: 'Loading and analysing soil profile data'
+author: "P. Roudier"
+date: "22 June 2017"
+output: html_document
+---
+
+# Loading soil data in R
+
+The main study cases are:
+
+- Text file format
+- Spatial file format
+- Database (spatial or not)
+ 
+`sf`, `sp`, `aqp`
+
+## Loading CSV files
+
+`readr`
+
+## Loading soil observations as spatial data
+
+`sp` and `sf`
+
+## The case of databases
+
+`st_read`, `dplyr` + SQLite 
+
+# Analysing soil data in R: first steps with AQP
+
+## Data structures for soil profile data 
+
+General idea behind SPC
+
+## Creation of `SoilProfileCollection`s
+
+`depths()<-`
+
+## Visualisation of `SoilProfileCollection`s
+
+`plotSPC`
+
+## Aggregation of `SoilProfileCollection`s
+
+`slab`
