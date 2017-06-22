@@ -1,0 +1,47 @@
+---
+title: "Web mapping and web apps for soil data"
+author: "P. Roudier"
+date: "22 June 2017"
+output: html_document
+---
+
+```{r libs}
+library(sf)
+library(raster)
+library(mapview)
+library(dplyr)
+
+data('cookfarm', package = "GSIF")
+
+names(cookfarm)
+```
+
+```{r format_data_grids, message=FALSE, warning=FALSE}
+grids <- cookfarm$grids %>% 
+  dplyr::select(x, y, DEM, TWI, Cook_fall_ECa, Cook_spr_ECa) %>% 
+  rasterFromXYZ(crs = cookfarm$proj4string)
+
+plot(grids)
+```
+
+```{r format_data_profiles, message=FALSE, warning=FALSE}
+profiles <- cookfarm$profiles %>% 
+  st_as_sf(coords = c('Easting', 'Northing'), crs = cookfarm$proj4string)
+
+plot(profiles)
+```
+
+```{r mapview_1, warning=FALSE}
+# Plot points
+mapview(profiles)
+
+# Plot grids
+mapview(grids)
+
+# Plot both together
+mapview(grids) + mapview(profiles)
+```
+
+```{r libs_shiny}
+
+```
