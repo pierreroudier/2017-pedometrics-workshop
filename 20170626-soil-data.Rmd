@@ -21,7 +21,7 @@ The main study cases are:
 
 ## Loading soil observations as spatial data
 
-`sp` and `sf`
+`sf` -- and how it plays well with `tidyverse`
 
 ## The case of databases
 
