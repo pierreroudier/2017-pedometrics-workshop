@@ -8,9 +8,13 @@ output: html_document
 ```{r libs}
 library(sf)
 library(raster)
-library(mapview)
 library(dplyr)
 
+library(mapview)
+library(RColorBrewer)
+```
+
+```{r data}
 data('cookfarm', package = "GSIF")
 
 names(cookfarm)
@@ -34,14 +38,116 @@ plot(profiles)
 ```{r mapview_1, warning=FALSE}
 # Plot points
 mapview(profiles)
+mapview(profiles, zcol = "BLD")
+mapview(profiles, zcol = "TAXSUSDA")
+
+pal_continuous <- colorRampPalette(brewer.pal(7, "BrBG"))
+pal_categorical <- colorRampPalette(brewer.pal(9, "Set1"))
+
+mapview(profiles, zcol = "BLD", col.regions = pal_continuous, legend = TRUE)
+mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical, legend = TRUE)
 
 # Plot grids
 mapview(grids)
+mapview(grids, col.regions = pal_continuous, legend = TRUE)
+mapview(grids$TWI, col.regions = pal_continuous, legend = TRUE)
 
 # Plot both together
-mapview(grids) + mapview(profiles)
+mapview(grids$DEM, col.regions = pal_continuous, legend = TRUE) + mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical)
+
+# Burst to separate soil classes
+mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical, legend = TRUE, burst = TRUE)
+
+# Syncing several maps
+m1 <- mapview(grids$DEM)
+m2 <- mapview(grids$TWI)
+m3 <- mapview(profiles)
+
+sync(m1, m2, m3)
+
+# Raster specific functions
+viewRGB(poppendorf)
+viewRGB(poppendorf, 4, 3, 2)
+
+# plainview
+plainview(poppendorf[[1]])
+plainview(poppendorf[[1]], at = seq(8000, 11000, 50))
+plainview(poppendorf, 4, 3, 2)
+plainview(poppendorf, 5, 4, 3, quantiles = c(0.5, 1))
+
+# slideview
+slideview(poppendorf[[1]], poppendorf[[5]])
+slideview(poppendorf[[1]], poppendorf[[5]], legend = FALSE)
+
+img1 <- poppendorf[[1]]
+img2 <- poppendorf[[5]]
+
+slideview(
+  img1, 
+  img2,
+  label1 = "Poppendorf-Layer-1",
+  label2 = "Poppendorf-Layer-2"
+)
+
+# cubeview
+# stck <- raster::stack("tappelhans/uni/talks/jena_201703/data/barazar.tif")
+# raster::nlayers(stck) * raster::ncell(stck) # takes a while!!
+# cubeview(stck)
+
+
+
 ```
 
-```{r libs_shiny}
+```{r advanced_mapview_1}
+mapview(
+  profiles, 
+  popup = popupImage('https://www.vcard.wur.nl/WebServices/GetMedia.ashx?id=37263')
+)
+```
 
+# Advanced `mapview`
+
+```{r advanced_mapview_2}
+library(xts)
+library(dygraphs)
+
+profiles$SOURCEID <- as.character(profiles$SOURCEID)
+
+records <- cookfarm$readings
+records$SOURCEID <- as.character(records$SOURCEID)
+
+ids <- unique(records$SOURCEID)
+
+# Subset sensors
+ids <- sample(ids, size = 5) 
+  
+idx_sensors <- which(profiles$SOURCEID %in% ids)
+sensors <- profiles[idx_sensors,]
+
+make_ts <- function(id) {
+  
+  records %>% 
+    filter(SOURCEID == id) %>% 
+    dplyr::select(-SOURCEID) %>%
+    dplyr::select(Date, ends_with('VW')) %>% 
+    xts(.$Date)
+}
+
+make_dygraph <- function(id){
+  ts <- make_ts(id)
+  dygraph(ts)
+} 
+
+l_graphs <- lapply(
+  ids,
+  make_dygraph
+)
+```
+
+```{r dygraph}
+make_dygraph(ids[1])
+```
+
+```{r result_mapview_dygraph, eval=FALSE}
+mapview(sensors, popup = popupGraph(graphs = l_graphs, width = 300, height = 300))
 ```
