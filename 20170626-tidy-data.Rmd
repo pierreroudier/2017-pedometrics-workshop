@@ -441,13 +441,33 @@ long <- wide %>%
 head(long)
 ```
 
-# Loading soil data into R
+# Bonus: handling conflicts between packages
 
-The main study cases are:
+Some packages will use the same name for different functions. 
 
-- Text file format
-- Spatial file format
-- Database (spatial or not)
- 
-`sf`, `sp`
+This is handle by the `NAMESPACE` -- however it is pretty basic, and long story short the last loaded package is "masking" the other functions with the same name.
 
+A simple and efficient workaround this is to use the `::` operator, that allow to by-pass the packages' `NAMESPACE`.
+
+You simply specify the package name then the function name. This way it is clear which package you are using: `package::function(...)`
+
+```{r conflicts, warning=FALSE}
+library(plyr)
+
+# In this case the grouping does not work
+sp4 %>% 
+  group_by(id) %>% 
+  summarise(
+    mean_K = mean(K),
+    mean_Mg = mean(Mg)
+  )
+
+# .... that's because our pipeline was using plyr::summarise 
+# instead of dplyr::summarise!
+sp4 %>% 
+  group_by(id) %>% 
+  dplyr::summarise(
+    mean_K = mean(K),
+    mean_Mg = mean(Mg)
+  )
+```

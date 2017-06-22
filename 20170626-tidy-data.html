@@ -173,7 +173,7 @@ tbl</code></pre>
 <pre class="r"><code>is.data.frame(tbl)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <p>You can convert vrey easily a <code>data.frame</code> to a <code>tibble</code>, and vice and versa:</p>
-<pre class="r"><code>head(mtcars) # print the first 5 line sof the mtcars dataset</code></pre>
+<pre class="r"><code>head(mtcars) # print the first 5 lines of the mtcars dataset</code></pre>
 <pre><code>##                    mpg cyl disp  hp drat    wt  qsec vs am gear carb
 ## Mazda RX4         21.0   6  160 110 3.90 2.620 16.46  0  1    4    4
 ## Mazda RX4 Wag     21.0   6  160 110 3.90 2.875 17.02  0  1    4    4
@@ -583,27 +583,27 @@ sp1 %&gt;%
 <pre><code>## # A tibble: 3 x 4
 ##      id   top bottom field_ph
 ##   &lt;chr&gt; &lt;int&gt;  &lt;int&gt;    &lt;dbl&gt;
-## 1  P008   192    200       NA
-## 2  P007   133    153       NA
-## 3  P005     5     30       NA</code></pre>
+## 1  P001    14     49        8
+## 2  P008     2     18       NA
+## 3  P003     2     13        8</code></pre>
 <pre class="r"><code>sp1 %&gt;% 
   select(id, top, bottom, field_ph) %&gt;% 
   sample_frac(0.2)</code></pre>
 <pre><code>## # A tibble: 12 x 4
 ##       id   top bottom field_ph
 ##    &lt;chr&gt; &lt;int&gt;  &lt;int&gt;    &lt;dbl&gt;
-##  1  P002     5     19       NA
-##  2  P006   160    170       NA
-##  3  P008   160    170       NA
-##  4  P008    18     24       NA
-##  5  P009   145    170       NA
-##  6  P006    49     63       NA
-##  7  P001    14     49        8
-##  8  P001    89     89       NA
-##  9  P008    24     68       NA
-## 10  P006     6     17       NA
-## 11  P008     2     18       NA
-## 12  P006    90    130       NA</code></pre>
+##  1  P004    32     43       NA
+##  2  P007   153    223       NA
+##  3  P005     0      5       NA
+##  4  P006    90    130       NA
+##  5  P006    17     49      8.6
+##  6  P003     0      2      7.5
+##  7  P003    35     53      8.0
+##  8  P001     0      2      7.9
+##  9  P007     0      4      7.0
+## 10  P005     5     30       NA
+## 11  P008    24     68       NA
+## 12  P002     5     19       NA</code></pre>
 </div>
 <div id="separate-and-group-columns" class="section level3">
 <h3>Separate and group columns</h3>
@@ -720,13 +720,13 @@ head(sp1_depths)</code></pre>
   even_more_data = LETTERS[1:9]
 )
 head(additional_data)</code></pre>
-<pre><code>##     id more_data even_more_data
-## 1 P001 0.5804817              A
-## 2 P002 0.5382814              B
-## 3 P003 0.5557576              C
-## 4 P004 0.6472879              D
-## 5 P005 0.1592839              E
-## 6 P006 0.1116122              F</code></pre>
+<pre><code>##     id  more_data even_more_data
+## 1 P001 0.94030364              A
+## 2 P002 0.05698531              B
+## 3 P003 0.58718085              C
+## 4 P004 0.93050738              D
+## 5 P005 0.45707411              E
+## 6 P006 0.35434993              F</code></pre>
 <pre class="r"><code>left_join(sp1, additional_data)</code></pre>
 <pre><code>## Joining, by = &quot;id&quot;</code></pre>
 <pre><code>## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining
@@ -754,13 +754,13 @@ head(additional_data)</code></pre>
   even_more_data = LETTERS[1:9]
 )
 head(additional_data)</code></pre>
-<pre><code>##     id  more_data even_more_data
-## 1 P001 0.09912038              A
-## 2 P002 0.17425841              B
-## 3 P003 0.40385791              C
-## 4 P004 0.19466888              D
-## 5 P005 0.92385679              E
-## 6 P006 0.55981289              F</code></pre>
+<pre><code>##     id more_data even_more_data
+## 1 P001 0.7709564              A
+## 2 P002 0.8671345              B
+## 3 P003 0.6886063              C
+## 4 P004 0.3439950              D
+## 5 P005 0.7971993              E
+## 6 P006 0.9589450              F</code></pre>
 <pre class="r"><code>left_join(sp1, additional_data, by = 'id')</code></pre>
 <pre><code>## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining
 ## factor and character vector, coercing into character vector</code></pre>
@@ -789,12 +789,12 @@ head(additional_data)</code></pre>
 )
 head(additional_data)</code></pre>
 <pre><code>##   some_id more_data even_more_data
-## 1    P001 0.9753197              A
-## 2    P002 0.6262374              B
-## 3    P003 0.5346301              C
-## 4    P004 0.8235644              D
-## 5    P005 0.9792311              E
-## 6    P006 0.2039333              F</code></pre>
+## 1    P001 0.3972110              A
+## 2    P002 0.1515875              B
+## 3    P003 0.1741273              C
+## 4    P004 0.3647757              D
+## 5    P005 0.6761577              E
+## 6    P006 0.9669458              F</code></pre>
 <pre class="r"><code>left_join(sp1, additional_data, by = c('id' = 'some_id'))</code></pre>
 <pre><code>## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining
 ## factor and character vector, coercing into character vector</code></pre>
@@ -822,13 +822,13 @@ head(additional_data)</code></pre>
   even_more_data = LETTERS[1:9]
 )
 head(additional_data)</code></pre>
-<pre><code>##   some_id some_group more_data even_more_data
-## 1    P001          1 0.6269556              A
-## 2    P002          2 0.3997652              B
-## 3    P003          2 0.8668949              C
-## 4    P004          1 0.4594636              D
-## 5    P005          1 0.7008520              E
-## 6    P006          2 0.8059228              F</code></pre>
+<pre><code>##   some_id some_group  more_data even_more_data
+## 1    P001          1 0.50235093              A
+## 2    P002          1 0.18227826              B
+## 3    P003          2 0.82376138              C
+## 4    P004          2 0.85036381              D
+## 5    P005          1 0.98368582              E
+## 6    P006          2 0.07860162              F</code></pre>
 <pre class="r"><code>left_join(
   sp1, additional_data, 
   by = c(
@@ -1065,15 +1065,57 @@ head(long)</code></pre>
 ## # ... with 3 more variables: Mg &lt;dbl&gt;, sand &lt;dbl&gt;, silt &lt;dbl&gt;</code></pre>
 </div>
 </div>
-<div id="loading-soil-data-into-r" class="section level1">
-<h1>Loading soil data into R</h1>
-<p>The main study cases are:</p>
-<ul>
-<li>Text file format</li>
-<li>Spatial file format</li>
-<li>Database (spatial or not)</li>
-</ul>
-<p><code>sf</code>, <code>sp</code></p>
+<div id="bonus-handling-conflicts-between-packages" class="section level1">
+<h1>Bonus: handling conflicts between packages</h1>
+<p>Some packages will use the same name for different functions.</p>
+<p>This is handle by the <code>NAMESPACE</code> – however it is pretty basic, and long story short the last loaded package is “masking” the other functions with the same name.</p>
+<p>A simple and efficient workaround this is to use the <code>::</code> operator, that allow to by-pass the packages’ <code>NAMESPACE</code>.</p>
+<p>You simply specify the package name then the function name. This way it is clear which package you are using: <code>package::function(...)</code></p>
+<pre class="r"><code>library(plyr)</code></pre>
+<pre><code>## -------------------------------------------------------------------------</code></pre>
+<pre><code>## You have loaded plyr after dplyr - this is likely to cause problems.
+## If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
+## library(plyr); library(dplyr)</code></pre>
+<pre><code>## -------------------------------------------------------------------------</code></pre>
+<pre><code>## 
+## Attaching package: 'plyr'</code></pre>
+<pre><code>## The following object is masked from 'package:purrr':
+## 
+##     compact</code></pre>
+<pre><code>## The following objects are masked from 'package:dplyr':
+## 
+##     arrange, count, desc, failwith, id, mutate, rename, summarise,
+##     summarize</code></pre>
+<pre class="r"><code># In this case the grouping does not work
+sp4 %&gt;% 
+  group_by(id) %&gt;% 
+  summarise(
+    mean_K = mean(K),
+    mean_Mg = mean(Mg)
+  )</code></pre>
+<pre><code>##   mean_K  mean_Mg
+## 1     NA 24.63667</code></pre>
+<pre class="r"><code># .... that's because our pipeline was using plyr::summarise 
+# instead of dplyr::summarise!
+sp4 %&gt;% 
+  group_by(id) %&gt;% 
+  dplyr::summarise(
+    mean_K = mean(K),
+    mean_Mg = mean(Mg)
+  )</code></pre>
+<pre><code>## # A tibble: 10 x 3
+##                id    mean_K  mean_Mg
+##             &lt;chr&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+##  1         colusa 0.1750000 29.22500
+##  2          glenn 0.2500000 20.40000
+##  3          kings 0.5333333 13.96667
+##  4       mariposa 0.3500000 46.12500
+##  5      mendocino 0.3000000 23.46667
+##  6           napa 0.2500000 16.30000
+##  7     san benito        NA  1.55000
+##  8         shasta 0.2500000  9.90000
+##  9 shasta-trinity 0.2000000 33.76000
+## 10         tehama 0.3666667 20.10000</code></pre>
 </div>
 
 
