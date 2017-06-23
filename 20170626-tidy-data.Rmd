@@ -1,8 +1,12 @@
 ---
 title: 'Dirty work: getting your data ready for analysis'
 author: "P. Roudier"
-date: "22 June 2017"
-output: html_document
+date: "26 June 2017"
+output: 
+  html_document:
+    toc: true
+    toc_float: true 
+    theme: yeti
 ---
 
 # From *messy* to *tidy* data

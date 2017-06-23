@@ -1,8 +1,12 @@
 ---
 title: 'Loading and analysing soil profile data'
 author: "P. Roudier"
-date: "22 June 2017"
-output: html_document
+date: "26 June 2017"
+output: 
+  html_document:
+    toc: true
+    toc_float: true 
+    theme: yeti
 ---
 
 ```{r libs, echo=FALSE, results='hide', message=FALSE}
@@ -307,24 +311,18 @@ nc_grouped <- nc_p %>%
   ) 
 
 ggplot(nc_grouped) +
-    geom_sf(aes(fill = sqrt(AREA))) +
-    facet_wrap(~group, ncol = 2)
+  geom_sf(aes(fill = sqrt(AREA))) +
+  facet_wrap(~group, ncol = 2)
+
+# Going full fancy
+p <- nc_grouped %>% 
+  select(-group) %>% 
+  ggplot() + 
+    geom_sf(colour = "grey70")
+
+p +
+  geom_sf(data = nc_grouped, aes(fill = sqrt(AREA))) +
+  facet_wrap(~group, ncol = 2) +
+  theme_bw()
+
 ```
-
-# Analysing soil data in R: first steps with AQP
-
-## Data structures for soil profile data 
-
-General idea behind SPC
-
-## Creation of `SoilProfileCollection`s
-
-`depths()<-`
-
-## Visualisation of `SoilProfileCollection`s
-
-`plotSPC`
-
-## Aggregation of `SoilProfileCollection`s
-
-`slab`
