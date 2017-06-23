@@ -26,11 +26,14 @@ names(cookfarm)
 
 ## Vector data
 
-The `profiles` component stores soil profile data as a `data.frame`. We will turn this into a simple featrure using the `sf` package:
+The `profiles` component stores soil profile data as a `data.frame`. We will turn this into a simple feature using the `sf` package:
 
 ```{r format_data_profiles, message=FALSE, warning=FALSE}
 profiles <- cookfarm$profiles %>% 
-  st_as_sf(coords = c('Easting', 'Northing'), crs = cookfarm$proj4string)
+  st_as_sf(
+    coords = c('Easting', 'Northing'), 
+    crs = cookfarm$proj4string
+  )
 
 # simple plot using the sf package
 plot(profiles)
@@ -56,16 +59,32 @@ plot(grids)
 
 ### Vector data
 
-```{r mapview_points, warning=FALSE}
+The `mapview` package is basically a wrapper around the `leaflet` package.
+
+It makes is very easy to create a `leaflet` map:
+
+```{r mapview_simple, warning=FALSE}
 # couldn't be easier to create a map!
 mapview(profiles)
+```
 
-# Tweaking palettes 
-pal_continuous <- colorRampPalette(brewer.pal(7, "BrBG"))
-pal_categorical <- colorRampPalette(brewer.pal(9, "Set1"))
+But while the `mapview` function can be called just as is, there's numerous details that can be tweaked. For example the colours:
 
-mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical, legend = TRUE)
+```{r mapview_palette, warning=FALSE}
+# Create palettes 
+pal_continuous <- colorRampPalette(brewer.pal(7, "BrBG")) # For continuous data
+pal_categorical <- colorRampPalette(brewer.pal(9, "Set1")) # For categorical data
 
+# Pass the palette to mapview
+mapview(
+  profiles, 
+  zcol = "TAXSUSDA", 
+  col.regions = pal_categorical, 
+  legend = TRUE
+)
+```
+
+```{r mapview_back}
 # Tweaking backgrounds
 mapview(profiles, zcol = "BLD", col.regions = pal_continuous, legend = TRUE, map.types = "Esri.WorldImagery")
 ```
@@ -80,8 +99,8 @@ mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical, legend = TRU
 ```{r mapview_grids}
 # Plot grids
 mapview(grids)
-mapview(grids, col.regions = pal_continuous, na.color = NA,  legend = TRUE)
-mapview(grids$TWI, col.regions = pal_continuous, na.color = NA, legend = TRUE)
+mapview(grids, col.regions = pal_continuous, na.color = "transparent",  legend = TRUE)
+mapview(grids$TWI, col.regions = pal_continuous, na.color = "transparent", legend = TRUE)
 ```
 
 ### Satellite data
@@ -92,10 +111,15 @@ viewRGB(poppendorf)
 viewRGB(poppendorf, 4, 3, 2)
 ```
 
-### Visualising projected data
+### Changing default options
 
-```{r plainview}
-plainview(grids$DEM)
+```{r options}
+mapviewOptions(
+  basemaps = c("Esri.WorldImagery", "Thunderforest.Landscape"),
+  na.color = "transparent"
+)
+
+mapview(profiles, zcol = "BLD") + mapview(grids$DEM)
 ```
 
 ### Adding `mapviews` together
@@ -105,11 +129,18 @@ plainview(grids$DEM)
 mapview(grids$DEM, col.regions = pal_continuous, legend = TRUE) + mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical)
 ```
 
+### Visualising projected data
+
+```{r plainview, eval=FALSE}
+plainview(grids$DEM)
+```
+
+
 ## Advanced tools
 
 ### Sync'ing maps
 
-```{r mapview_sync}
+```{r mapview_sync, eval=FALSE}
 # Syncing several maps
 m1 <- mapview(grids$DEM) 
 m2 <- mapview(grids$TWI) 
@@ -118,9 +149,11 @@ m3 <- mapview(grids$Cook_fall_ECa)
 sync(m1, m2, m3, ncol = 2, sync.cursor = TRUE)
 ```
 
+This is an interactive analogue to the panelled graphs provided by `ggplot2` or `lattice`.
+
 ### Slideview
 
-```{r slideview}
+```{r slideview, eval=FALSE}
 img1 <- poppendorf[[1]]
 img2 <- poppendorf[[5]]
 
@@ -144,7 +177,7 @@ mapview(
 
 # Advanced `mapview`
 
-```{r advanced_mapview_2}
+```{r advanced_mapview_2, eval=FALSE}
 library(xts)
 library(dygraphs)
 
@@ -181,7 +214,7 @@ l_graphs <- lapply(
 )
 ```
 
-```{r dygraph}
+```{r dygraph, eval=FALSE}
 make_dygraph(ids[1])
 ```
 
