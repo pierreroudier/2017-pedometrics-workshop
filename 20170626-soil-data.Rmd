@@ -5,27 +5,311 @@ date: "22 June 2017"
 output: html_document
 ---
 
+```{r libs, echo=FALSE, results='hide', message=FALSE}
+library('sf', warn.conflicts = FALSE, verbose = FALSE)
+```
+
+Soil data has its specificities, but generally speaking we can get away with treating it like a spatial dataset for a significant part of the analysis workflow. This is why in the first part of this tutorial, we will present tools to read and process spatial data. However in the second part we will address data structures and packages that are specific to the soil profile.
+
 # Loading soil data in R
 
-The main study cases are:
+A lot (most?) of soil data is stored as using spatial formats -- for better or worse. While the soil profile is a specific case (we can consider it as a set of horizons generated from a spatial point located at the surface of our planet, soil surveys, landsacpe attributes and enviornemental covariates are best represented as spatial datasets. 
 
-- Text file format
-- Spatial file format
-- Database (spatial or not)
+When reading such data, the main study cases are:
+
+- Text file formats, such as `txt` or `csv`
+- Spatial file formats, such as ESRI Shapefiles or Geopackages
+- Database (spatial or not), such as Postgres, PostGIS, etc.
  
-`sf`, `sp`, `aqp`
+ In this tutorial, we will mostly cover the two first cases.
+ 
+## Packages
+
+### In the old days...
+
+The "classic approach" is a collection of 4 packages:
+
+- `sp`: provides a set of dedicated classes for the different vector and raster datatypes , and *some* analysis tools (overlays, etc.),
+- `rgdal`: input/output library built over GDAL/OGR to read and write spatial data,
+- `rgeos`: geometry library built over GEOS for all geometry operations (union, intersections, buffer, etc).
+
+### The bleeding edge
+
+Recently (this year), a new package has been introduced to manipulate vector data: `sf` (for Simple Features). It's a pretty interesting improvement on `sp`/`rgdal`/`rgeos`, and we will focus on it in this tutorial.
+
+In a few words, here's what is interesting about `sf`:
+
+- It's providing users with one **unique** class for all vector types,
+- It's based on **Simple Features**, a formal standard (ISO 19125-1:2004) widely used in the GIS world that describes how objects in the real world can be represented,
+- The main class provided by `sf` is a **`data.frame`** -- which means that a lot of data analysis methods are readily available,
+- It combines the capabilities of `sp`, `rgdal`, and `rgeos` under one **unique package**,
+- It is easier to install on some platforms than `rgdal`,
+- It is **much faster**, and **scales better** than `sp` and `rgdal` --- the upcoming version will include **spatial indexing**!
+
+## Simple Features?
+
+### Quick definition
+
+According to the standard: 
+
+> "A simple feature is defined by the OpenGIS Abstract specification to have **both spatial and non-spatial attributes**. Spatial attributes are **geometry** valued, and simple features are based on 2D geometry with linear interpolation between vertices."
+
+Basically, spatial is not that special anymore: spatial attributes can be described as a *geometry*, which is just another attribute of the dataset.
+
+Several types of geometry can be implemented using this standard: `POINT`, `LINESTRING`, `POLYGON`, `MULTIPOINT`, `MULTILINESTRING`, `MULTIPOLYGON`, `GEOMETRYCOLLECTION`. There's also more fancy stuff like `CURVEPOLYGON`, etc. 
+
+### Implementation in R
+  
+Simple Features are represented using WKT/WKB (Well Known Text/Well Known Binary).  It looks like:
+
+```{r simplefeatures, echo=FALSE}
+st_point(c(0,1))
+
+st_multipoint(matrix(1:10, , 2))
+
+outer = matrix(c(0,0,10,0,10,10,0,10,0,0),ncol=2, byrow=TRUE)
+hole1 = matrix(c(1,1,1,2,2,2,2,1,1,1),ncol=2, byrow=TRUE)
+hole2 = matrix(c(5,5,5,6,6,6,6,5,5,5),ncol=2, byrow=TRUE)
+pol1 = list(outer, hole1, hole2)
+pol2 = list(outer + 12, hole1 + 12)
+pol3 = list(outer + 24)
+mp = list(pol1,pol2,pol3)
+
+st_multipolygon(mp)
+```
+
+Simple Features are represented by `sf` as a `data.frame`. The spatial attributes of the Simple Features (or `geometry`) are represenetd using WKT. Technically speaking, there are 3 types of classes implemented by the `sf` package:
+
+- `sf` is the `data.frame` with spatial attributes,
+- `sfc` is the column storing the geometries of the different records in the `data.frame`,
+- `sfg` is the geometry of each individual record.
+
+![Illustration from Edzer Pebesma](https://edzer.github.io/sfr/articles/sf_xfig.png)
+
+The functions provided by `sf` are prefixed by `st_` --- similarly to *PostGIS*. That makes it easy to search for them on the command line too.
 
 ## Loading CSV files
 
-`readr`
+It is very often that point data (such as profiles) is exchanged using a text delimited format such as CSV.
+
+### Reading text files
+
+CSV and TXT files can be read using the classic `read.csv`, `read.delim`, etc., in `base` R. however, the `readr` package --- from the `tidyverse` --- does provide interesting alternatives that are much faster in read and write.
+
+```{r readr, eval=FALSE}
+library(tidyverse)
+
+df <- read_csv('./path/to/my/file.csv')
+```
+
+### Converting to Simple Features
+
+Let's take the example dataset `meuse` from the `sp` package. `meuse` is a `data.frame` --- similar to what could have been read from a CSV file using `read_csv`:
+
+```{r conv_sf}
+data('meuse', package = "sp")
+head(meuse)
+```
+
+The easiest way to modifiy this `data.frame` so that its coordinates (`x` and `y`) are used to generate a `geometry` column is using `st_as_sf` ("as simple feature"):
+
+```{r conv_sf_1}
+ms <- st_as_sf(
+  meuse, 
+  coords = c('x', 'y'),
+  crs = "+init=epsg:28992"
+)
+
+ms
+
+plot(ms)
+```
 
 ## Loading soil observations as spatial data
 
-`sf` -- and how it plays well with `tidyverse`
+Spatial data can be read using the `st_read` command (it's using GDAL/OGR behind the scenes). Unlike `readOGR` from the `rgdal` package, generally the command can guess which driver it should use. 
+
+```{r sf_read}
+file_name <- system.file("shape/nc.shp", package="sf")
+nc <- st_read(file_name)
+print(nc)
+plot(nc)
+```
+
+Its counterpart is `st_write` and is just as easy to use:
+
+```{r save, eval=FALSE}
+st_write(nc, "nc.shp")
+st_write(nc, "nc.shp", delete_layer = TRUE)
+
+# Note that write_st erases existing layers silently:
+write_sf(nc, "nc.shp")
+```
+
+The drivers available on your machine can be printed using the `st_drivers` command:
+
+```{r drivers}
+my_drivers <- st_drivers()
+head(my_drivers)
+```
 
 ## The case of databases
 
-`st_read`, `dplyr` + SQLite 
+GDAL/OGR can read data from databases --- so `sf` does too:
+
+```{r db, eval=FALSE}
+# Using GDAL
+meuse <- st_read("PG:dbname=postgis", "meuse")
+
+# Using the Postgres package
+library(RPostgreSQL)
+
+# Connect to a PostGIS instance
+conn <- dbConnect(PostgreSQL(), dbname = "postgis")
+
+# Use this conection to make a query
+x <- st_read_db(conn, "meuse", query = "SELECT * FROM meuse LIMIT 3;")
+x <- st_read_db(conn, table = "public.meuse")
+
+print(st_crs(x)) # SRID resolved by the database, not by GDAL!
+
+# Close the DB connection
+dbDisconnect(conn)
+
+# Write spatial data as SQLite database
+sf::write_sf(nc, 'nc.sqlite')
+```
+
+## Manipulating Simple Features
+
+```{r methods, echo=FALSE, warning=FALSE}
+idx_st <- methods(class = "sf") %>% stringr::str_detect('st_') %>% which
+
+idx_else <- setdiff(seq_len(length(methods(class = "sf"))), idx_st)
+```
+
+Very roughly, he `sf` package provides two types of functions:
+
+1. Spatial data operators (read, write, buffer, intersection, etc), prefixed by `st_`:
+
+```{r methods1, echo=FALSE, message=FALSE}
+methods(class = 'sf')[idx_st]
+```
+
+2. A suite of `dplyr` verbs addapted for the `sf` data:
+
+```{r methods2, echo=FALSE, message=FALSE}
+methods(class = 'sf')[idx_else]
+```
+
+### Spatial queries
+
+`sf` is very well integrated with `dplyr` and the `tidyverse`, providing verbs that are adapted to working with `geometries`. For example `summarise` will also operate a spatial union:
+
+```{r sf_tidy, message=FALSE}
+library(dplyr)
+
+nc %>% 
+  mutate(
+    group = sample(LETTERS[1:3], size = n(), replace = TRUE),
+    area = st_area(.), # Note the computation of area on the fly
+    sqrt_area = sqrt(area)
+  ) %>% 
+  group_by(group) %>% 
+  summarise(mean_area = mean(sqrt_area)) %>% 
+  plot
+```
+
+
+### Projection
+
+```{r proj}
+# Test whether data is projected or not
+st_is_longlat(nc)
+
+# Projection
+nc_p <- st_transform(nc, crs = "+init=epsg:32119")
+nc_p <- st_transform(nc, crs = 32119)
+
+# Retrieve projection information
+st_crs(nc_p)
+```
+
+### Geometry
+
+```{r geometry_ops}
+# Sanity check on the geometries
+st_is_valid(nc[1:3,])
+
+# Distances
+st_distance(nc_p[1:3,], nc_p[3:6,])
+```
+
+The commands `st_intersects`, `st_disjoint`, `st_touches`, `st_crosses`, `st_within`, `st_contains`, `st_overlaps`, `st_equals`, `st_covers`, `st_covered_by`, `st_equals_exact` and `st_is_within_distance` are logical tests. They return a sparse matrix with matching (TRUE) indexes, or a full logical matrix:
+
+```{r geometru_ops_2}
+# Intersects
+st_intersects(nc_p[1:5,], nc_p[1:4,])
+
+
+st_intersects(nc_p[1:5,], nc_p[1:4,], sparse = FALSE)
+```
+
+The commands st_buffer, st_boundary, st_convexhull, st_union_cascaded, st_simplify, st_triangulate, st_polygonize, st_centroid, st_segmentize, and st_union return new geometries, e.g.:
+
+```{r geometru_ops_3}
+buf <- st_buffer(nc_p[c(1, 2, 14),], dist = 30000)
+plot(buf, border = 'red')
+```
+
+Commands `st_intersection`, `st_union`, `st_difference`, `st_sym_difference` return new geometries that are a function of pairs of geometries:
+
+```{r geometru_ops_4}
+# Intersection
+i <- st_intersection(nc_p[1:5,], nc_p[1:4,])
+plot(i)
+
+# Union
+u <- st_union(nc)
+plot(u)
+```
+
+### Coercion
+
+Note that you can convert `sf` objects back to either `data.frame` or one of the old `sp` classes very easily:
+
+```{r coercion}
+# Convert to data.frame
+as.data.frame(nc) %>% head
+
+# convert to one of the sp classes
+as(nc, "Spatial") %>% summary
+```
+
+### `ggplot2` compatibility
+
+In the upcoming version of `ggplot2` (note that I'm running the development version), `sf` object can be plotted very easily using `geom_sf` --- so the incredible power of this plotting sytem can be takn advantage of:
+
+```{r ggplot}
+library(ggplot2)
+packageVersion('ggplot2')
+
+# Unprojected data
+ggplot(nc) + 
+  geom_sf(aes(fill = AREA))
+
+# Facetting (on projected data this time!)
+
+nc_grouped <- nc_p %>% 
+  mutate(
+    # Creating a (random) group attribute
+    group = sample(LETTERS[1:3], size = n(), replace = TRUE)
+  ) 
+
+ggplot(nc_grouped) +
+    geom_sf(aes(fill = sqrt(AREA))) +
+    facet_wrap(~group, ncol = 2)
+```
 
 # Analysing soil data in R: first steps with AQP
 
