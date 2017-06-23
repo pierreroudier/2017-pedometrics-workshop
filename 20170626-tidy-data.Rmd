@@ -7,6 +7,8 @@ output: html_document
 
 # From *messy* to *tidy* data
 
+![](http://static.thinkr.fr/clean-your-data.jpg)
+
 A very significant part of your time *will* be spent formatting data.
 
 **Data tidying** is the operation of transforming data into a clear and simple form that makes it easy to work with:
