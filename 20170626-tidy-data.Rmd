@@ -20,26 +20,52 @@ A very significant part of your time *will* be spent formatting data.
 - Very often one wants one row per observation/sample, with each column representing a measured/estimated variable.
 - There is always a range of mistakes to fix in your raw data so to make automation/scripting possible
 
-In this quick tutorial I will introduce some tools I frequently use to put my data into shape *before I start the analysis*.
+Data tidying is the most unglamourous, frustrating step on your way to Pedometrics glory. In this quick tutorial I will introduce some tools I frequently use to put my data into shape *before I start the analysis*.
 
 ## The tidyverse
 
 In this tutorial I will showcase functions from a *family of packages* called the **tidyverse**. 
 
+![*Hadley Whickam, 2017*](https://rviews.rstudio.com/post/2017-06-09-What-is-the-tidyverse_files/tidyverse1.png)
+
 Some functionalities from the `tidyverse` are already present in `base` R, or provided by other packages, but this set of tools are following common logic, and usually make this data tidying step:
+
 - *a little bit* less frustrating
 - *a little bit* faster
 
+### The `tidyverse` family of packages
+
+One of the mantras of Hadley Whickam --- the creator of the `tidyverse` --- is inspired from the Unix philospophy:
+
+> Build simple tools that do one thing --- and do it well.
+
+This results into a rather extensive, and ever growing, collection of R packages that share a common philosophy, rather than one unique, monolithic package. 
+
+These set of tools have been coded with the same philosophy in mind:
+
+> 1. Reuse existing data structures.
+> 2. Compose simple functions with the pipe.
+> 3. Embrace functional programming.
+> 4. Design for humans.
+
+It is well worth checking out the website: `http://tidyverse.org/`. There is also a dedicated book which I assume is excellent (I haven't readit yet): *R for Data Science*.
+
+### Meet your new friends!
+
+> 2. Compose simple functions [with the pipe].
+
+The key packages that implement the `tidyverse` philosophy or R programming:
+
 ```{r load_tidy, message=FALSE}
-library(readr) # read flat/text files (such as CSV)
 library(dplyr) # a grammar of data manipulation
 library(tidyr) # play with data dimensions
+library(magrittr) # Create "pipelines"
 ```
 
-Some tools are more specific:
+Some other packages are more specific towards a task or a type of data:
 
 ```{r load_tidy_2, message=FALSE}
-library(magrittr) # Create "pipelines"
+library(readr) # rea fflat/text files (such as CSV)d
 library(stringr) # manipulating character strings
 library(forcats) # handle categorical data more easily
 ```
@@ -52,14 +78,8 @@ library(purrr) # advanced functional programming
 library(readxl) # read data directly from Microsoft Excel files
 ```
 
-These set of tools have been coded with the same philosophy in mind:
+### Loading the `tidyverse` all at once
 
-1. Reuse existing data structures.
-2. Compose simple functions with the pipe.
-3. Embrace functional programming.
-4. Design for humans.
-
-It is well worth checking out the website: `http://tidyverse.org/`
 A handy tip: you can load the whole family of *tidy* packages by calling the `tidyverse` library:
 
 ```{r load_tidyverse, message=FALSE}
@@ -67,6 +87,8 @@ library(tidyverse)
 ```
 
 ## `data.frame` FTW `r emo::ji("victory")`
+
+>  1. Reuse existing data structures.
 
 At the centre of this set of tols is the `data.frame`. The `data.frame` is the most common data structure in R. Tools from the `tidyverse` all only work on `data.frame`. 
 
@@ -78,7 +100,7 @@ tbl
 is.data.frame(tbl)
 ```
 
-You can convert vrey easily a `data.frame` to a `tibble`, and vice and versa:
+You can convert very easily a `data.frame` to a `tibble`, and vice and versa:
 
 ```{r tibble_2}
 head(mtcars) # print the first 5 lines of the mtcars dataset
@@ -90,31 +112,78 @@ class(tbl_mtcars)
 as.data.frame(tbl_mtcars)
 ```
 
+You can think of the `tibble` as water-downed version of the `data.frame`. It does *less* --- in particular it won't take any decisions for you (for example converting strings to factors), and is more focused towards what's actually needed during an interactive data analysis session:
+
+- only prints the first few rows and columns
+- prints the type of each column
+
 ## Pipelines
+
+> 4. Design for humans.
 
 There's a tool that fits very well in this picture: the *pipe* operator. 
 
-The pipe operator is denoted `%>%`, and is introduced by the `magrittr` package.
+The pipe operator is denoted `%>%`, and is introduced by the `magrittr` package. 
+
+**To insert a pipe in RStudio**, type: `Ctrl + Shift + M`.
+
+![](./pipe.jpeg)
 
 What it does is to "pass" the result of a function to another function. Therefore:
 
 ```{r magrittr}
 head(mtcars) # print the first 5 line sof the mtcars dataset
 
-# Let's say you want to filter the vehicles that have 
-# 6 cylinders, and create a new variable that is the square
-# root of their fuel consumption:
-res <- subset(mtcars, cyl == 6)
-res <- mutate(res, mpg_sq = sqrt(res$mpg))
-res
+# Consider the following example:
+mtcars %>%
+  subset(hp > 100) %>%
+  aggregate(. ~ cyl, data = ., FUN = . %>% mean %>% round(2)) %>%
+  transform(kpl = mpg %>% multiply_by(0.4251)) %>%
+  print
 
-res <- mtcars %>% 
-  subset(cyl == 6) %>% 
-  mutate(mpg_sq = sqrt(mpg))
-res
+# Its horrific alternative:
+transform(aggregate(. ~ cyl, data = subset(mtcars, hp > 100), FUN = function(x) round(mean(x, 2))), kpl = mpg*0.4251)
+
+# Another equally problematic alternative:
+res1 <- subset(mtcars, hp > 100)
+res2 <- aggregate(. ~ cyl, data = res1, FUN = function(x) round(mean(x, 2)))
+res3 <- transform(res2, kpl = mpg*0.4251)
 ```
 
-You don't have to use it, but it makes your code more readable.
+There is *always* more than one fundamental operation to apply to any given dataset.
+
+What `magrittr` offers is a simple solution to the *naming* or *obscufaction* problems. You don't have to use it, but it makes your code more readable.
+
+## Now let's load some data
+
+```{r load_aqp, message=FALSE}
+# let's load some soil profile data
+data(sp1, package  = 'aqp')
+sp1 <- as_tibble(sp1)
+```
+
+### Strings
+
+The `stringr` package provides a wide range of tools to handle *strings of characters*. These are often a headache when dealing with soil data (typos, rogue white spaces, etc).
+
+Its functions are prefixed with `str_`:
+
+```{r stringr}
+# Detect a pattern
+str_detect(sp1$name, 'A')
+
+# Replace a pattern by something else
+str_replace_all(sp1$name, '[0-9]', '')
+str_replace_all(sp1$name, '[0-9]', '')
+
+# These can be chained using the `%>%`  opeartor
+sp1$name %>% 
+  str_replace_all('[0-9]', '') %>% 
+  str_replace_all('[a-z]', '')
+
+str_extract_all(sp1$name, '[A-Z]', simplify = TRUE) %>% 
+  head
+```
 
 ## The tidyverse verbs
 
@@ -128,31 +197,13 @@ The `tidyverse` provides a set of basic verbs corresponding to each specific tas
 - Summarise multiple values into a single one: `summarise`
 - Sample rows: `sample_n` (and `sample_frac`)
 
-```{r load_aqp, message=FALSE}
-# let's load some soil profile data
-data(sp1, package  = 'aqp')
-sp1 <- as_tibble(sp1)
-```
+Remember *the zen of tidy data*:
 
-### Strings
-
-The `stringr` package provides a wide range of tools to handle strings of characters. These are often a headache when dealing with soil data (rogue white sapces, etc):
-
-```{r stringr}
-str_detect(sp1$name, 'A')
-
-str_replace_all(sp1$name, '[0-9]', '')
-str_replace_all(sp1$name, '[0-9]', '')
-
-sp1$name %>% 
-  str_replace_all('[0-9]', '') %>% 
-  str_replace_all('[a-z]', '')
-
-str_extract_all(sp1$name, '[A-Z]', simplify = TRUE) %>% 
-  head
-```
+> 4. Design for humans.
 
 ### Filter
+
+Filtering specific rows according to their attributes:
 
 ```{r filter, message=FALSE}
 sp1 %>% 
@@ -171,7 +222,12 @@ sp1 %>%
 
 ### Select
 
+Selecting attributes according to their name or position.
+
 ```{r select}
+sp1 %>% 
+  select(1:3)
+
 sp1 %>% 
   select(id, top, bottom, field_ph) 
 
@@ -187,6 +243,8 @@ sp1 %>%
 
 ### Rename
 
+Change the name of a variable.
+
 ```{r rename}
 sp1 %>% 
   select(id, top, bottom, field_ph) %>% 
@@ -195,11 +253,20 @@ sp1 %>%
 
 ### Arrange
 
+Sort the rows according to one (or several) variable.
+
 ```{r arrange}
+# Sort horizon data according to field_ph
 sp1 %>% 
   select(id, top, bottom, field_ph) %>% 
   arrange(field_ph) 
 
+# Sort according to field_ph THEN chroma
+sp1 %>% 
+  select(id, top, bottom, field_ph, chroma) %>% 
+  arrange(field_ph, chroma) 
+
+# Sort in descending order
 sp1 %>% 
   select(id, top, bottom, field_ph) %>% 
   arrange(desc(field_ph)) 
@@ -216,7 +283,10 @@ sp1 %>%
 
 ### Add new columns
 
+`mutate` (and `transmutate`) are very useful tools: they allow you to create a new variable (eg from existing ones). `transmute` drops existing variables. 
+
 ```{r mutate}
+# `mutate` creates one (or more!) new variables
 sp1 %>% 
   select(id, top, bottom, field_ph) %>% 
   mutate(log_ph = log(field_ph))
@@ -228,9 +298,16 @@ sp1 %>%
     log_ph = log(field_ph),
     log_ph_p1 = log_ph + 1
   )
+
+# `transmute` drops existing variables
+sp1 %>% 
+  select(id, top, bottom, field_ph) %>% 
+  transmute(log_ph = log(field_ph))
 ```
 
 ### Summarise a group of rows into a unique value
+
+Apply a function returning a **unique** value to a group of values. This covers a wide range of statistical indicators, such as the mean, the min/max, etc.
 
 ```{r summarise}
 sp1 %>% 
@@ -241,6 +318,8 @@ sp1 %>%
 ```
 
 ### Random sampling of rows
+
+The `sample_n` and `sample_frac` select a **random** number or fraction of rows from a dataset:
 
 ```{r sample}
 sp1 %>% 
@@ -254,13 +333,16 @@ sp1 %>%
 
 ### Separate and group columns
 
+The `unite` function can group two columns together to create a new, single variable. For example we might want to create a new variavle `pretty_depth` from the `top` and `bottom` attributes. It would look like `<TOP>--<BOTTOM> cm`:
+
 ```{r unite}
 sp1 %>% 
-  unite(depth, top, bottom, sep = '-')
+  unite(pretty_depth, top, bottom, sep = '--')
 
+# To add "cm" at the end of the variable we can use `mutate`:
 sp1_depths <- sp1 %>% 
-  unite(depth, top, bottom, sep = '-') %>% 
-  mutate(depth = str_c(depth, 'cm')) 
+  unite(pretty_depth, top, bottom, sep = '--') %>% 
+  mutate(pretty_depth = str_c(pretty_depth, 'cm')) 
 
 head(sp1_depths)
 ```
@@ -269,18 +351,24 @@ head(sp1_depths)
 
 ```{r separate}
 sp1_depths %>% 
-  separate(depth, c('top', 'bottom'), sep = '-')
+  separate(pretty_depth, c('top', 'bottom'), sep = '-') # Split the variable using '--'
 
 sp1_depths %>% 
-  separate(depth, c('top', 'bottom'), sep = '-') %>% 
-  mutate(bottom = str_replace(bottom, 'cm', ''))
+  separate(
+    pretty_depth, c('top', 'bottom'), sep = '--' 
+  ) %>% 
+  mutate(
+    bottom = str_replace(bottom, 'cm', '') # Remove "cm"
+  ) 
 
 sp1_depths %>% 
-  separate(depth, c('top', 'bottom'), sep = '-') %>% 
+  separate(
+    pretty_depth, c('top', 'bottom'), sep = '--'
+  ) %>% 
   mutate(
     bottom = str_replace(bottom, 'cm', ''),
-    top = as.numeric(top),
-    bottom = as.numeric(bottom)
+    top = as.numeric(top), # Convert `top` from character to numeric
+    bottom = as.numeric(bottom) # Convert `bottom` from character to numeric
   )
 ```
 
@@ -356,6 +444,10 @@ left_join(
 
 ### Grouped operations
 
+Some operations will need to be grouped according to a given attribute --- for example per profile, or per region, etc. 
+
+The `group_by` operator modify your `data.frame` so to apply subsequent oerations sequencially on these groups:
+
 ```{r group}
 sp1 %>% 
   group_by(id) %>% 
@@ -370,6 +462,10 @@ sp1 %>%
 ```
 
 ### Apply arbitrary functions
+
+When the function you apply to all or a group of rows does **not** return a unique value, but something more complex --- eg `anova` or `lm`.
+
+In this case, `do` allows you to create a specific type of column: the *list-column*.
 
 ```{r do}
 # Fit a linear model for each level of column "group"
@@ -388,6 +484,17 @@ sp1 %>%
   summarise(
     rsq = summary(model)$r.squared
   )
+```
+
+```{r rf}
+library(randomForest)
+
+# A silly example to show that you can store many things --- like a random forest model
+sp1 %>% 
+  select(group, field_ph, chroma, value) %>% 
+  na.omit %>% 
+  group_by(group) %>% 
+  do(fit = randomForest::randomForest(field_ph ~  value + chroma, data = .))
 ```
 
 ## From wide to long (and back)

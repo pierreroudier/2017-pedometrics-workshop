@@ -1,5 +1,5 @@
 ---
-title: "Web mapping and web apps for soil data"
+title: "Web mapping --- the easy way"
 author: "P. Roudier"
 date: "26 June 2017"
 output: 
@@ -9,13 +9,18 @@ output:
     theme: yeti
 ---
 
+First, let's load our friends: `sf` (vector data), `raster` (raster data), and `dplyr` (general data tidying):
+
 ```{r libs, message=FALSE, warning=FALSE, results='hide'}
 library(sf)
 library(raster)
 library(dplyr)
+```
 
+Then let's load the `mapview` package, which makes the production of web maps in R very easy:
+
+```{r libs2, message=FALSE, warning=FALSE, results='hide'}
 library(mapview)
-library(RColorBrewer)
 ```
 
 # Datasets
@@ -43,14 +48,13 @@ profiles <- cookfarm$profiles %>%
 plot(profiles)
 ```
 
-
 ## Raster data
 
 The `grids` component is storing gridded data. We will reansform these into a `RasterStack` using the `rasterFromXYZ` function. This function requires the `x` and `y` columns to be the first column of the `data.frame` (from the left) -- a good opportunity to use the `select` function from the `dplyr` package:
 
 ```{r format_data_grids, message=FALSE, warning=FALSE}
 grids <- cookfarm$grids %>% 
-  dplyr::select(x, y, DEM, TWI, Cook_fall_ECa, Cook_spr_ECa) %>%  # Re-order the columns, and select 4 interesting variables
+  select(x, y, DEM, TWI, Cook_fall_ECa, Cook_spr_ECa) %>%  # Re-order the columns, and select 4 interesting variables
   rasterFromXYZ(crs = cookfarm$proj4string) # The coordinate reference system is stored as one of the component in cookfarm
 
 # simple plot using the raster package
@@ -59,13 +63,9 @@ plot(grids)
 
 # Interactive maps using `mapview`
 
-## Let's start easy... 
+## Vector data
 
-### Vector data
-
-The `mapview` package is basically a wrapper around the `leaflet` package.
-
-It makes is very easy to create a `leaflet` map:
+The `mapview` package is basically a wrapper around the `leaflet` package. It makes is very easy to create a `leaflet` map. You can basically just use it as you would use `plot`:
 
 ```{r mapview_simple, warning=FALSE}
 # couldn't be easier to create a map!
@@ -76,6 +76,7 @@ But while the `mapview` function can be called just as is, there's numerous deta
 
 ```{r mapview_palette, warning=FALSE}
 # Create palettes 
+library(RColorBrewer)
 pal_continuous <- colorRampPalette(brewer.pal(7, "BrBG")) # For continuous data
 pal_categorical <- colorRampPalette(brewer.pal(9, "Set1")) # For categorical data
 
@@ -88,34 +89,84 @@ mapview(
 )
 ```
 
+In particular, a wide range of background (web) maps is available. You can pick one or several. You can find a list of these background from [the Leaflet-extras project website](http://leaflet-extras.github.io/leaflet-providers/preview/): `http://leaflet-extras.github.io/leaflet-providers/preview/`.
+
 ```{r mapview_back}
 # Tweaking backgrounds
 mapview(profiles, zcol = "BLD", col.regions = pal_continuous, legend = TRUE, map.types = "Esri.WorldImagery")
 ```
+
+The `burst` option can be interesting when you visualise categorical data:
 
 ```{r mapview_burst}
 # Burst to separate soil classes
 mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical, legend = TRUE, burst = TRUE)
 ```
 
-### Raster data
+## Raster data
+
+The `mapview` option also work for data loaded using the `raster` package. If you try to visualise a `RasterStack` (as opposed to `RasterLayer`), you can select and choose which layer to plot using the selection interface.
 
 ```{r mapview_grids}
-# Plot grids
-mapview(grids)
-mapview(grids, col.regions = pal_continuous, na.color = "transparent",  legend = TRUE)
+# Plot a RasterLayer
 mapview(grids$TWI, col.regions = pal_continuous, na.color = "transparent", legend = TRUE)
+
+# Plot a RasterStack
+mapview(grids)
+
+# The same sort of options are available
+mapview(grids, col.regions = pal_continuous, na.color = "transparent",  legend = TRUE)
 ```
 
-### Satellite data
+### Extent of rasters
+
+You can visualise the raster extent --- rather than the data itself --- using `viewExtent`:
+
+```{r extent}
+viewExtent(grids)
+```
+
+## Imagery data
+
+For imagery, it is a little diffferent, because usually one wants to visualise a RGB composite of 3 layers, rather than the individual layers individually. In this case, the `viewRGB` is the way to go:
 
 ```{r mapview_sat}
-# Raster specific functions
+# Imagery specific functions
 viewRGB(poppendorf)
+# The combination of bands can be changed very easily
 viewRGB(poppendorf, 4, 3, 2)
 ```
 
-### Changing default options
+## Adding `mapviews` together
+
+Conveniently, maps can be aded to each other using the `+` operator:
+
+```{r mapview_both}
+# Create 2 maps
+m1 <- mapview(grids$DEM, col.regions = pal_continuous, legend = TRUE) 
+m2 <- mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical)
+
+# Plot both together
+m1 + m2
+```
+
+## Visualising projected data
+
+What `mapview` does behind the scenes is to change the projection system to EPSG:3857 (web mercator). In some cases, this is inconvenient and you might actually want to visualise your data in a local projected CRS. `plainview` is here to help:
+
+```{r plainview, eval=FALSE}
+plainview(grids$DEM)
+```
+
+# Advanced topics
+
+## What happens behind the scenes
+
+`mapview` is a wrapper around `leaflet` package, which is a R API for the popular Javascript library for web mapping called `Leaflet`. `Leaflet` has been designed with simplicity and rapidity in mind. For more power, you'll have to learn a bit more about the `leaflet` package itself. Their website is a great starting point.
+
+## Changing default options
+
+A bunch of options can be changed using the `mapviewOptions` function: 
 
 ```{r options}
 mapviewOptions(
@@ -126,23 +177,9 @@ mapviewOptions(
 mapview(profiles, zcol = "BLD") + mapview(grids$DEM)
 ```
 
-### Adding `mapviews` together
+## Sync'ing maps
 
-```{r mapview_both}
-# Plot both together
-mapview(grids$DEM, col.regions = pal_continuous, legend = TRUE) + mapview(profiles, zcol = "TAXSUSDA", col.regions = pal_categorical)
-```
-
-### Visualising projected data
-
-```{r plainview, eval=FALSE}
-plainview(grids$DEM)
-```
-
-
-## Advanced tools
-
-### Sync'ing maps
+You can associate and synchronise a set of maps using the `sync` function:
 
 ```{r mapview_sync, eval=FALSE}
 # Syncing several maps
@@ -155,7 +192,9 @@ sync(m1, m2, m3, ncol = 2, sync.cursor = TRUE)
 
 This is an interactive analogue to the panelled graphs provided by `ggplot2` or `lattice`.
 
-### Slideview
+## Slideview
+
+Another advanced visualisation tool is `slideview`, which is convenient to compare two maps:
 
 ```{r slideview, eval=FALSE}
 img1 <- poppendorf[[1]]
@@ -170,16 +209,56 @@ slideview(
 )
 ```
 
-### Popups
+## Popups
+
+The popups can be either a table (`popupTable`, default behaviour), an image (`popupImage`), or a `htmlwidget` (`popupGraph`).
 
 ```{r advanced_mapview_1}
+# Table
+mapview(
+  profiles, 
+  popup = popupTable(profiles, zcol = 1:2)
+)
+
+# Image
 mapview(
   profiles, 
   popup = popupImage('https://www.vcard.wur.nl/WebServices/GetMedia.ashx?id=37263')
 )
 ```
 
-# Advanced `mapview`
+## Garnish map
+
+The `leaflet` and `leaflet.extras` are providing a **LOT** of different map widgets. The `garnishMaps` function facilitates their integration with `mapview`:
+
+```{r garnish}
+library(leaflet)
+
+m <- mapview(profiles)
+garnishMap(
+  m,
+  addMouseCoordinates,
+  addGraticule,
+  addScaleBar
+)
+```
+
+## Save map
+
+```{r save, eval=FALSE}
+# Create map
+m  <- mapview(profiles)
+
+# Save interactive HTML page
+mapshot(m, url = 'my_map.html')
+
+# Save static image (PNG, JPEG, or PDF)
+mapshot(m, file = 'my_image.png')
+```
+
+****
+
+# Super advanced `mapview` `r set.seed(4);emo::ji('magic')`
 
 ```{r advanced_mapview_2, eval=FALSE}
 library(xts)

@@ -1,5 +1,5 @@
 ---
-title: 'Loading and analysing soil profile data'
+title: 'Loading and analysing spatial data with the `sf` package'
 author: "P. Roudier"
 date: "26 June 2017"
 output: 
@@ -13,9 +13,7 @@ output:
 library('sf', warn.conflicts = FALSE, verbose = FALSE)
 ```
 
-Soil data has its specificities, but generally speaking we can get away with treating it like a spatial dataset for a significant part of the analysis workflow. This is why in the first part of this tutorial, we will present tools to read and process spatial data. However in the second part we will address data structures and packages that are specific to the soil profile.
-
-# Loading soil data in R
+Soil data has its specificities, but generally speaking we can get away with treating it like a spatial dataset for a significant part of the analysis workflow. This is why in this tutorial, we will present tools to read and process spatial data. 
 
 A lot (most?) of soil data is stored as using spatial formats -- for better or worse. While the soil profile is a specific case (we can consider it as a set of horizons generated from a spatial point located at the surface of our planet, soil surveys, landsacpe attributes and enviornemental covariates are best represented as spatial datasets. 
 
@@ -27,9 +25,9 @@ When reading such data, the main study cases are:
  
  In this tutorial, we will mostly cover the two first cases.
  
-## Packages
+# Packages
 
-### In the old days...
+## In the old days...
 
 The "classic approach" is a collection of 4 packages:
 
@@ -37,7 +35,7 @@ The "classic approach" is a collection of 4 packages:
 - `rgdal`: input/output library built over GDAL/OGR to read and write spatial data,
 - `rgeos`: geometry library built over GEOS for all geometry operations (union, intersections, buffer, etc).
 
-### The bleeding edge
+## The bleeding edge `r set.seed(4);emo::ji('thunder')`
 
 Recently (this year), a new package has been introduced to manipulate vector data: `sf` (for Simple Features). It's a pretty interesting improvement on `sp`/`rgdal`/`rgeos`, and we will focus on it in this tutorial.
 
@@ -50,9 +48,9 @@ In a few words, here's what is interesting about `sf`:
 - It is easier to install on some platforms than `rgdal`,
 - It is **much faster**, and **scales better** than `sp` and `rgdal` --- the upcoming version will include **spatial indexing**!
 
-## Simple Features?
+# Simple Features?
 
-### Quick definition
+## Quick definition
 
 According to the standard: 
 
@@ -62,14 +60,15 @@ Basically, spatial is not that special anymore: spatial attributes can be descri
 
 Several types of geometry can be implemented using this standard: `POINT`, `LINESTRING`, `POLYGON`, `MULTIPOINT`, `MULTILINESTRING`, `MULTIPOLYGON`, `GEOMETRYCOLLECTION`. There's also more fancy stuff like `CURVEPOLYGON`, etc. 
 
-### Implementation in R
+## Implementation in R
   
 Simple Features are represented using WKT/WKB (Well Known Text/Well Known Binary).  It looks like:
 
 ```{r simplefeatures, echo=FALSE}
 st_point(c(0,1))
 
-st_multipoint(matrix(1:10, , 2))
+x <- matrix(data = 1:10, ncol = 2, nrow = 5)
+st_multipoint(x)
 
 outer = matrix(c(0,0,10,0,10,10,0,10,0,0),ncol=2, byrow=TRUE)
 hole1 = matrix(c(1,1,1,2,2,2,2,1,1,1),ncol=2, byrow=TRUE)
@@ -92,7 +91,9 @@ Simple Features are represented by `sf` as a `data.frame`. The spatial attribute
 
 The functions provided by `sf` are prefixed by `st_` --- similarly to *PostGIS*. That makes it easy to search for them on the command line too.
 
-## Loading CSV files
+# Reading and writing spatial datasets
+
+## Loading spatial data from text files
 
 It is very often that point data (such as profiles) is exchanged using a text delimited format such as CSV.
 
@@ -106,7 +107,7 @@ library(tidyverse)
 df <- read_csv('./path/to/my/file.csv')
 ```
 
-### Converting to Simple Features
+### Converting `data.frame` to Simple Features
 
 Let's take the example dataset `meuse` from the `sp` package. `meuse` is a `data.frame` --- similar to what could have been read from a CSV file using `read_csv`:
 
@@ -125,19 +126,24 @@ ms <- st_as_sf(
 )
 
 ms
+```
 
+There is a simple plotting funtion including in `sf`. It is very similar to the old `sp::spplot`:
+
+```{r sf_plot}
 plot(ms)
 ```
 
-## Loading soil observations as spatial data
+## Loading spatial data formats
 
-Spatial data can be read using the `st_read` command (it's using GDAL/OGR behind the scenes). Unlike `readOGR` from the `rgdal` package, generally the command can guess which driver it should use. 
+A wide selecton of spatial data formats can be read using the `st_read` command (it's using GDAL/OGR behind the scenes). Unlike `readOGR` from the `rgdal` package, generally the command can guess which driver it should use. 
 
 ```{r sf_read}
 file_name <- system.file("shape/nc.shp", package="sf")
 nc <- st_read(file_name)
 print(nc)
 plot(nc)
+plot(nc['AREA'])
 ```
 
 Its counterpart is `st_write` and is just as easy to use:
@@ -184,7 +190,7 @@ dbDisconnect(conn)
 sf::write_sf(nc, 'nc.sqlite')
 ```
 
-## Manipulating Simple Features
+# Manipulating Simple Features
 
 ```{r methods, echo=FALSE, warning=FALSE}
 idx_st <- methods(class = "sf") %>% stringr::str_detect('st_') %>% which
@@ -192,7 +198,7 @@ idx_st <- methods(class = "sf") %>% stringr::str_detect('st_') %>% which
 idx_else <- setdiff(seq_len(length(methods(class = "sf"))), idx_st)
 ```
 
-Very roughly, he `sf` package provides two types of functions:
+Very roughly, the `sf` package provides two types of functions:
 
 1. Spatial data operators (read, write, buffer, intersection, etc), prefixed by `st_`:
 
@@ -206,13 +212,26 @@ methods(class = 'sf')[idx_st]
 methods(class = 'sf')[idx_else]
 ```
 
-### Spatial queries
+## `tidy` verbs
 
-`sf` is very well integrated with `dplyr` and the `tidyverse`, providing verbs that are adapted to working with `geometries`. For example `summarise` will also operate a spatial union:
+`sf` is very well integrated with `dplyr` and the `tidyverse`: remember that Simple Features as implemented by `sf` are fundamentally just `data.frame`s!
 
-```{r sf_tidy, message=FALSE}
+```{r join}
 library(dplyr)
 
+# Example: joining non-spatial attributes
+# 
+additional_data <- data.frame(
+  CNTY_ID = nc$CNTY_ID,
+  my_data <- runif(nrow(nc))
+)
+
+left_join(nc, additional_data, by = 'CNTY_ID')
+```
+
+`sf` is also providing verbs that are **adapted** to working with `geometries`. For example `summarise` will also operate a spatial union:
+
+```{r sf_tidy, message=FALSE}
 nc %>% 
   mutate(
     group = sample(LETTERS[1:3], size = n(), replace = TRUE),
@@ -225,48 +244,69 @@ nc %>%
 ```
 
 
-### Projection
+## Projection
+
+The main functions are `st_crs`, which retrieves the Coordinate Reference System (CRS) of the `sf` object,
+ and `st_transform`, which allows to re-project the dataset into a different CRS.
+
+The CRS can be specified as an EPSG number (that is: an integer), or as a character string follwoing the Proj.4 standard.
 
 ```{r proj}
+# Retrieve projection information
+st_crs(nc)
+
 # Test whether data is projected or not
 st_is_longlat(nc)
 
 # Projection
-nc_p <- st_transform(nc, crs = "+init=epsg:32119")
+# 
+
+# Using a Proj.4 string
+nc_p <- st_transform(nc, crs = "+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.22 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
+# using an EPSG code
 nc_p <- st_transform(nc, crs = 32119)
 
-# Retrieve projection information
 st_crs(nc_p)
 ```
 
-### Geometry
+## Geometry
+
+The `sf` library wraps the capabilities of the GEOS (Geometry Engine Open Source) library --- which is a very powerful piece of software used throughout the GIS industry, notably in PostGIS. The geometry functions in `sf` are prefixed using `st_` to mimic the PostGIS counterpart functions.
 
 ```{r geometry_ops}
+# Area of features
+st_area(nc)
+
+# Distances between features
+st_distance(nc_p[1:3,], nc_p[3:6,])
+
 # Sanity check on the geometries
 st_is_valid(nc[1:3,])
-
-# Distances
-st_distance(nc_p[1:3,], nc_p[3:6,])
 ```
 
-The commands `st_intersects`, `st_disjoint`, `st_touches`, `st_crosses`, `st_within`, `st_contains`, `st_overlaps`, `st_equals`, `st_covers`, `st_covered_by`, `st_equals_exact` and `st_is_within_distance` are logical tests. They return a sparse matrix with matching (TRUE) indexes, or a full logical matrix:
+The commands `st_intersects`, `st_disjoint`, `st_touches`, `st_crosses`, `st_within`, `st_contains`, `st_overlaps`, `st_equals`, `st_covers`, `st_covered_by`, `st_equals_exact` and `st_is_within_distance` are **logical tests**. They return a sparse matrix with matching (TRUE) indexes, or a full logical matrix:
 
 ```{r geometru_ops_2}
 # Intersects
 st_intersects(nc_p[1:5,], nc_p[1:4,])
 
-
 st_intersects(nc_p[1:5,], nc_p[1:4,], sparse = FALSE)
 ```
 
-The commands st_buffer, st_boundary, st_convexhull, st_union_cascaded, st_simplify, st_triangulate, st_polygonize, st_centroid, st_segmentize, and st_union return new geometries, e.g.:
+The commands `st_buffer`, `st_boundary`, `st_convexhull`, `st_union_cascaded`, `st_simplify`, `st_triangulate`, `st_polygonize`, `st_centroid`, `st_segmentize`, and `st_union` return **new geometries**, e.g.:
 
 ```{r geometru_ops_3}
 buf <- st_buffer(nc_p[c(1, 2, 14),], dist = 30000)
 plot(buf, border = 'red')
 ```
 
-Commands `st_intersection`, `st_union`, `st_difference`, `st_sym_difference` return new geometries that are a function of pairs of geometries:
+The `st_buffer` function computes a buffer outwards or inwards from features. Bonus trick: if you have invalid fatures, try to make a buffer of size zero
+
+```{r fix, eval=FALSE}
+fix <- st_buffer(corrupted, dist = 0)
+```
+
+Commands `st_intersection`, `st_union`, `st_difference`, `st_sym_difference` return **new geometries** that are a function of pairs of geometries:
 
 ```{r geometru_ops_4}
 # Intersection
@@ -278,7 +318,7 @@ u <- st_union(nc)
 plot(u)
 ```
 
-### Coercion
+## Coercion to and from the `sp` classes
 
 Note that you can convert `sf` objects back to either `data.frame` or one of the old `sp` classes very easily:
 
@@ -290,9 +330,9 @@ as.data.frame(nc) %>% head
 as(nc, "Spatial") %>% summary
 ```
 
-### `ggplot2` compatibility
+# `ggplot2` compatibility
 
-In the upcoming version of `ggplot2` (note that I'm running the development version), `sf` object can be plotted very easily using `geom_sf` --- so the incredible power of this plotting sytem can be takn advantage of:
+In the upcoming version of `ggplot2` (note that I'm running **the development version**), `sf` object can be plotted very easily using `geom_sf` --- so the incredible power of this plotting sytem can be takn advantage of:
 
 ```{r ggplot}
 library(ggplot2)
@@ -324,5 +364,4 @@ p +
   geom_sf(data = nc_grouped, aes(fill = sqrt(AREA))) +
   facet_wrap(~group, ncol = 2) +
   theme_bw()
-
 ```
