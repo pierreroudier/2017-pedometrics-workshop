@@ -6,7 +6,7 @@ pkg <- c(
   "raster",
   "mapview",
   "RColorBrewer",
-  "dygraphs"
+  "dygraphs",
   "xts"
 )
 
