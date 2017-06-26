@@ -82,7 +82,11 @@ server <- function(input, output) {
   
   # Plot location of sensor
   output$map <- renderLeaflet({
+    
+    coords <-st_coordinates( get_point() )
+      
     leaflet() %>% 
+      setView(lng = coords[1], lat = coords[2], zoom = 18) %>% 
       addProviderTiles(provider = "Esri.WorldImagery") %>% 
       addMarkers(data = get_point() )
   })
