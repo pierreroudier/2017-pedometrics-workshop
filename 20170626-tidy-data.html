@@ -222,6 +222,23 @@ div.tocify {
 </div>
 
 
+<div id="packages" class="section level1">
+<h1>Packages</h1>
+<pre class="r"><code>pkg &lt;- c(
+  &quot;sf&quot;,
+  &quot;tidyverse&quot;,
+  &quot;randomForest&quot;,
+  &quot;plyr&quot;,
+  &quot;raster&quot;,
+  &quot;mapview&quot;,
+  &quot;RColorBrewer&quot;,
+  &quot;dygraphs&quot;
+  &quot;xts&quot;
+)
+
+install.packages(pkg)</code></pre>
+<hr />
+</div>
 <div id="from-messy-to-tidy-data" class="section level1">
 <h1>From <em>messy</em> to <em>tidy</em> data</h1>
 <div class="figure">
@@ -806,27 +823,27 @@ sp1 %&gt;%
 <pre><code>## # A tibble: 3 x 4
 ##      id   top bottom field_ph
 ##   &lt;chr&gt; &lt;int&gt;  &lt;int&gt;    &lt;dbl&gt;
-## 1  P009     0      3       NA
-## 2  P003    13     35      7.9
-## 3  P009    70    108       NA</code></pre>
+## 1  P001     0      2      7.9
+## 2  P009    14     26       NA
+## 3  P001    49     57      7.9</code></pre>
 <pre class="r"><code>sp1 %&gt;% 
   select(id, top, bottom, field_ph) %&gt;% 
   sample_frac(0.2)</code></pre>
 <pre><code>## # A tibble: 12 x 4
 ##       id   top bottom field_ph
 ##    &lt;chr&gt; &lt;int&gt;  &lt;int&gt;    &lt;dbl&gt;
-##  1  P001     2     14      7.7
-##  2  P003     0      2      7.5
-##  3  P004     2     13       NA
-##  4  P004    43     62       NA
-##  5  P002    19     33       NA
-##  6  P005    45     68       NA
-##  7  P003    53     67      8.1
-##  8  P001     0      2      7.9
-##  9  P003     2     13      8.0
-## 10  P006    17     49      8.6
-## 11  P004    32     43       NA
-## 12  P001    14     49      8.0</code></pre>
+##  1  P007   133    153       NA
+##  2  P008   192    200       NA
+##  3  P003    13     35      7.9
+##  4  P004    13     32       NA
+##  5  P001     0      2      7.9
+##  6  P006    49     63       NA
+##  7  P002    33     59       NA
+##  8  P007    55     78       NA
+##  9  P009   145    170       NA
+## 10  P009   108    145       NA
+## 11  P002     0      5       NA
+## 12  P006   160    170       NA</code></pre>
 </div>
 <div id="separate-and-group-columns" class="section level3">
 <h3>Separate and group columns</h3>
@@ -955,12 +972,12 @@ head(sp1_depths)</code></pre>
 )
 head(additional_data)</code></pre>
 <pre><code>##     id more_data even_more_data
-## 1 P001 0.4367735              A
-## 2 P002 0.9596479              B
-## 3 P003 0.2806086              C
-## 4 P004 0.8804887              D
-## 5 P005 0.1113099              E
-## 6 P006 0.6536058              F</code></pre>
+## 1 P001 0.6309925              A
+## 2 P002 0.6023873              B
+## 3 P003 0.6406882              C
+## 4 P004 0.6876627              D
+## 5 P005 0.2525699              E
+## 6 P006 0.6029485              F</code></pre>
 <pre class="r"><code>left_join(sp1, additional_data)</code></pre>
 <pre><code>## Joining, by = &quot;id&quot;</code></pre>
 <pre><code>## Warning: Column `id` joining character vector and factor, coercing into
@@ -988,13 +1005,13 @@ head(additional_data)</code></pre>
   even_more_data = LETTERS[1:9]
 )
 head(additional_data)</code></pre>
-<pre><code>##     id more_data even_more_data
-## 1 P001 0.4324883              A
-## 2 P002 0.8966241              B
-## 3 P003 0.1502127              C
-## 4 P004 0.6862264              D
-## 5 P005 0.4069572              E
-## 6 P006 0.2999564              F</code></pre>
+<pre><code>##     id  more_data even_more_data
+## 1 P001 0.02363097              A
+## 2 P002 0.47242762              B
+## 3 P003 0.65108059              C
+## 4 P004 0.43304188              D
+## 5 P005 0.54390380              E
+## 6 P006 0.90992588              F</code></pre>
 <pre class="r"><code>left_join(sp1, additional_data, by = 'id')</code></pre>
 <pre><code>## Warning: Column `id` joining character vector and factor, coercing into
 ## character vector</code></pre>
@@ -1022,13 +1039,13 @@ head(additional_data)</code></pre>
   even_more_data = LETTERS[1:9]
 )
 head(additional_data)</code></pre>
-<pre><code>##   some_id   more_data even_more_data
-## 1    P001 0.248225191              A
-## 2    P002 0.147442914              B
-## 3    P003 0.539948297              C
-## 4    P004 0.009626806              D
-## 5    P005 0.489857678              E
-## 6    P006 0.297480714              F</code></pre>
+<pre><code>##   some_id  more_data even_more_data
+## 1    P001 0.70534764              A
+## 2    P002 0.91183981              B
+## 3    P003 0.05437370              C
+## 4    P004 0.70144569              D
+## 5    P005 0.90785130              E
+## 6    P006 0.03566324              F</code></pre>
 <pre class="r"><code>left_join(sp1, additional_data, by = c('id' = 'some_id'))</code></pre>
 <pre><code>## Warning: Column `id`/`some_id` joining character vector and factor,
 ## coercing into character vector</code></pre>
@@ -1056,13 +1073,13 @@ head(additional_data)</code></pre>
   even_more_data = LETTERS[1:9]
 )
 head(additional_data)</code></pre>
-<pre><code>##   some_id some_group  more_data even_more_data
-## 1    P001          1 0.29790991              A
-## 2    P002          1 0.57948558              B
-## 3    P003          1 0.11301943              C
-## 4    P004          2 0.07110624              D
-## 5    P005          2 0.58724431              E
-## 6    P006          2 0.02966350              F</code></pre>
+<pre><code>##   some_id some_group more_data even_more_data
+## 1    P001          2 0.3371303              A
+## 2    P002          2 0.4027665              B
+## 3    P003          1 0.1424314              C
+## 4    P004          2 0.2555414              D
+## 5    P005          1 0.8883834              E
+## 6    P006          1 0.2770981              F</code></pre>
 <pre class="r"><code>left_join(
   sp1, additional_data, 
   by = c(

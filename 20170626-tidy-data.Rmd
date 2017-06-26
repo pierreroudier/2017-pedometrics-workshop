@@ -9,6 +9,25 @@ output:
     theme: yeti
 ---
 
+# Packages
+
+```{r pkg, eval=FALSE}
+pkg <- c(
+  "sf",
+  "tidyverse",
+  "randomForest",
+  "plyr",
+  "raster",
+  "mapview",
+  "RColorBrewer",
+  "dygraphs"
+  "xts"
+)
+
+install.packages(pkg)
+```
+
+*** 
 # From *messy* to *tidy* data
 
 ![](http://static.thinkr.fr/clean-your-data.jpg)
